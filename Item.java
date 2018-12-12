@@ -45,6 +45,7 @@ class Item implements Comparable<Item>{
         //Comapare Items based to their price
         @Override
         public int compareTo(Item o) {
+            //if(o == null)return 1; 
             if(this.profit < o.profit)return 1;
             else if(this.profit > o.profit)return -1;
             return 0;

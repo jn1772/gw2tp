@@ -16,7 +16,7 @@ class GW2TP {
     
     public static void main(String[] args) throws Exception {
         //Max items from TP (only for testing)
-        int max = 300;
+        int max = 500;
         
         //Connects to GW2 servers and gets required Information
         InfoGet info = new InfoGet();
@@ -26,12 +26,11 @@ class GW2TP {
         
         //Struct Items
         Item[] items = info.initItems(itemIds);
-        
         //Get all item's prices at TP listing
-        info.getItemsPrices(items, max);
+        info.getItemsPrices(items, itemIds, max);
         
         //Get Info about items such as name description type etc
-        info.getItemsInfo(items, max);
+        info.getItemsInfo(items, itemIds, max);
         
         //Calculator
         Genie genie = new Genie();
@@ -42,6 +41,6 @@ class GW2TP {
         Item[] sorted = genie.sortItemsByMaxProfit(items);
         
         //Displya the top #arg2 items for profit
-        genie.displayTopItems(sorted, 100, info);
+        genie.displayTopItems(sorted, max, info);
     }
 }

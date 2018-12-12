@@ -62,10 +62,14 @@ class InfoGet{
     }
     
     Item[] initItems(ArrayList<Long> ids){
-        Item[] items = new Item[ids.size()];
+        int max = 0;
         for(int i=0;i<ids.size();++i){
-            items[i] = new Item();
-            items[i].id = ids.get(i);
+            max = Math.max((int)(long)ids.get(i), max);
+        }
+        Item[] items = new Item[max+1];
+        for(int i=0;i<ids.size();++i){
+            items[(int)(long)ids.get(i)] = new Item();
+            items[(int)(long)ids.get(i)].id = ids.get(i);
         }
         return items;
     }
@@ -101,7 +105,6 @@ class InfoGet{
         item.type = (String)obj.get("type");
         item.description = (String)obj.get("description");
         
-        if(item.name.matches("null"))System.out.println("Name is null for desc : "+item.description+" type : "+item.type);
         if(debug){
             System.out.println("\nName: "+item.name+
                            "\nType: "+item.type+
@@ -122,22 +125,25 @@ class InfoGet{
         }
     }
 
+    static int tp=0;
     /*
     Get item info for 'max' number of Items in items[]. 200 at a time.
     */
-    ArrayList<Long> getItemsInfo(Item items[], int max) throws Exception {
+    void getItemsInfo(Item items[], ArrayList<Long> ids, int maxx) throws Exception {
         int processed = 0;
+        int max = maxx;//ids.size();
         
         while(processed < max){
             StringBuilder sbb = new StringBuilder();
             int j;
             for (j = processed; j < Math.min(200 + processed, max); ++j) { 
-                sbb.append(items[j].id).append(",");
+                sbb.append(items[(int)(long)ids.get(j)].id).append(",");
             }
             sbb.deleteCharAt(sbb.length()-1);
             processed = j;
             
-            if(debug)System.out.println("getItemsInfo processed : "+processed+"/"+items.length);
+            if(debug);
+            System.out.println("getItemsInfo processed : "+processed+"/"+max);
 
             URI uri = new URIBuilder()
                     .setScheme("https")
@@ -160,7 +166,7 @@ class InfoGet{
                 //if(respDebug)System.out.println(line);
                 sb.append(line);
             }
-
+            
             JSONParser parser = new JSONParser();
             Object obj = parser.parse(sb.toString());
             JSONArray itemIds = (JSONArray) obj;
@@ -171,29 +177,31 @@ class InfoGet{
                 String name = (String)object.get("name");
                 String type = (String)object.get("type");
                 int id = (int)(long)object.get("id");
+                int level = (int)(long)object.get("level");
                 String description = (String)object.get("description");
                 
                 items[id].name = name;
                 items[id].type = type;
                 items[id].description = description;
+                items[id].level = level;
+                
                 if(debug);
-                    System.out.println("Curr : "+id+" Name: "+name);
+                    //System.out.println("Curr : "+id+" Name: "+name);
             }
         }
-        return null;
     }
     
     /*
     Get Item Prices at TP for 'max' number of items in items[]. 200 at a time.
     */
-    ArrayList<Long> getItemsPrices(Item []items, int max) throws Exception {
-
+    ArrayList<Long> getItemsPrices(Item []items, ArrayList<Long> ids, int maxx) throws Exception {
+        int max = maxx;//ids.size();
         int processed = 0;
         while(processed < max){
             StringBuilder sbb = new StringBuilder();
             int j;
             for (j = processed; j < Math.min(200 + processed, max); ++j) {
-                sbb.append(items[j].id).append(",");
+                sbb.append(items[(int)(long)ids.get(j)].id).append(",");
             }
             processed = j;
             sbb.deleteCharAt(sbb.length()-1);
@@ -207,7 +215,7 @@ class InfoGet{
             HttpGet httpGet = new HttpGet(uri);
             HttpClient client = HttpClientBuilder.create().build();
             HttpResponse response = client.execute(httpGet);
-
+            //if((tp+=200) > 3200)System.out.println("tp = "+tp+" "+sbb.toString());
             // Get the response
             BufferedReader rd = new BufferedReader(new InputStreamReader(
                     response.getEntity().getContent()));
@@ -218,50 +226,55 @@ class InfoGet{
                 //if(respDebug)System.out.println(line);
                 sb.append(line);
             }
-            System.out.println("itemsPrices processed : "+processed+"/"+items.length);
+            System.out.println("itemsPrices processed : "+processed+"/"+max);
             JSONParser parser = new JSONParser();
-            Object obj = parser.parse(sb.toString());
-            JSONArray itemIds = (JSONArray) obj;
-            Iterator<Object> iterator = itemIds.iterator();
+            try{
+                Object obj = parser.parse(sb.toString());
+                JSONArray itemIds = (JSONArray) obj;
+                Iterator<Object> iterator = itemIds.iterator();
 
-            int curr=0;
-            while (iterator.hasNext()) {
+                int curr=0;
+                while (iterator.hasNext()) {
 
-                JSONObject object = (JSONObject) iterator.next();
-                JSONArray buys = (JSONArray) object.get("buys");
-                JSONArray sells = (JSONArray) object.get("sells");
-                int id = (int)((long)object.get("id"));
+                    JSONObject object = (JSONObject) iterator.next();
+                    JSONArray buys = (JSONArray) object.get("buys");
+                    JSONArray sells = (JSONArray) object.get("sells");
+                    int id = (int)((long)object.get("id"));
 
-                Iterator<Object> itt = buys.iterator();
-                while(itt.hasNext()){
-                    JSONObject listing = (JSONObject)itt.next();
-                    long listings = (long)listing.get("listings");
-                    long price = (long)listing.get("unit_price");
-                    long quantity = (long)listing.get("quantity");
-                    if(debug)System.out.println("curr: "+curr+
-                            " Buy : [listings, price, quantity]: "+
-                            listings+", "+price+", "+quantity);
+                    Iterator<Object> itt = buys.iterator();
+                    while(itt.hasNext()){
+                        JSONObject listing = (JSONObject)itt.next();
+                        long listings = (long)listing.get("listings");
+                        long price = (long)listing.get("unit_price");
+                        long quantity = (long)listing.get("quantity");
+                        if(debug)System.out.println("curr: "+curr+
+                                " Buy : [listings, price, quantity]: "+
+                                listings+", "+price+", "+quantity);
 
-                    items[id].b_listings.add(listings);
-                    items[id].b_unit_price.add(price);
-                    items[id].b_quantity.add(quantity);
+                        items[id].b_listings.add(listings);
+                        items[id].b_unit_price.add(price);
+                        items[id].b_quantity.add(quantity);
+                    }
+
+                    itt = sells.iterator();
+                    while(itt.hasNext()){
+                        JSONObject listing = (JSONObject)itt.next();
+                        long listings = (long)listing.get("listings");
+                        long price = (long)listing.get("unit_price");
+                        long quantity = (long)listing.get("quantity");
+
+                        if(debug)System.out.println("curr: "+curr+
+                                " Sell : [listings, price, quantity]: "+
+                                listings+", "+price+", "+quantity);
+                        items[id].s_listings.add(listings);
+                        items[id].s_unit_price.add(price);
+                        items[id].s_quantity.add(quantity);
+                    }
+                    curr++;
                 }
-
-                itt = sells.iterator();
-                while(itt.hasNext()){
-                    JSONObject listing = (JSONObject)itt.next();
-                    long listings = (long)listing.get("listings");
-                    long price = (long)listing.get("unit_price");
-                    long quantity = (long)listing.get("quantity");
-
-                    if(debug)System.out.println("curr: "+curr+
-                            " Sell : [listings, price, quantity]: "+
-                            listings+", "+price+", "+quantity);
-                    items[id].s_listings.add(listings);
-                    items[id].s_unit_price.add(price);
-                    items[id].s_quantity.add(quantity);
-                }
-                curr++;
+            }catch (ClassCastException e){
+                System.out.println("!Exception (Class Cast). Continuing...");
+                System.out.println("Item ids were : "+sbb);
             }
         }
         return null;
