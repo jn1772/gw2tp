@@ -12,12 +12,10 @@ public class Genie {
         
         System.arraycopy(items, 0, curItems, 0, curItems.length);
         
-        Arrays.sort(curItems, Comparator.nullsLast(new Comparator<Item>(){
-            public int compare(Item a, Item b){
-                if(a.profit > b.profit)return -1;
-                else if(a.profit < b.profit)return 1;
-                return 0;
-            }
+        Arrays.sort(curItems, Comparator.nullsLast((Item a, Item b) -> {
+            if(a.profit > b.profit)return -1;
+            else if(a.profit < b.profit)return 1;
+            return 0;
         }));
         return curItems;
     }
@@ -25,10 +23,8 @@ public class Genie {
     void displayTopItems(Item[] item, int top, InfoGet infoget) throws Exception{
         for(int i=0;i<top;++i){
             Item it = item[i];
-            if(it==null){
-                System.out.println("Null item in top "+top);continue;
-            }
-            System.out.println("Getting profit for item : "+it.name +" lvl "+it.level+" desc : "+it.description+" type : "+it.type);
+            if(it==null){System.out.println("Null item in top "+top);continue;}
+            System.out.println("Getting profit for item : "+it.name +" lvl "+it.level+" desc : "+it.description+" type : "+it.type+" id : "+it.id);
             it.calcProfit();
             if(it.profit == 0)continue;
             Price bp=null, sp=null;

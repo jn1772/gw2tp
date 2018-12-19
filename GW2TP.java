@@ -12,35 +12,48 @@ TODO:
     7. Multiple connections for InfoGet for faster fetching
 */
 
-class GW2TP {
+public class GW2TP {
     
-    public static void main(String[] args) throws Exception {
-        //Max items from TP (only for testing)
-        int max = 500;
-        
+    
+    public static void main(String[] args) throws Exception{
+        //Connect to DB
+        DB db = new DB();
+        db.initdbconn();
+        boolean was_old = db.process_old();
+
         //Connects to GW2 servers and gets required Information
         InfoGet info = new InfoGet();
         
         //List of all item IDS returned by server
         ArrayList<Long> itemIds = info.getItemsIds();
         
+        //Max items from TP (only for testing)
+        int max = 200;//itemIds.size();
+        
         //Struct Items
         Item[] items = info.initItems(itemIds);
-        //Get all item's prices at TP listing
-        info.getItemsPrices(items, itemIds, max);
         
-        //Get Info about items such as name description type etc
-        info.getItemsInfo(items, itemIds, max);
+        if(was_old || db.newDB){
+            //Get Info about items such as name description type etc
+            info.getItemsInfo(items, itemIds, max, db);
+
+            //Get all item's prices at TP listing
+            info.getItemsPrices(items, itemIds, max);
+        }else{
+            info.getInfoFromDB(items, db);
+        }
         
         //Calculator
         Genie genie = new Genie();
         
         //Calculate profits
         genie.calcProfits(items);
+
         //Sort items by max profit on resell
         Item[] sorted = genie.sortItemsByMaxProfit(items);
         
         //Displya the top #arg2 items for profit
         genie.displayTopItems(sorted, max, info);
+
     }
 }

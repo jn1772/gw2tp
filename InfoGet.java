@@ -1,6 +1,8 @@
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import org.apache.http.HttpResponse;
@@ -129,7 +131,7 @@ class InfoGet{
     /*
     Get item info for 'max' number of Items in items[]. 200 at a time.
     */
-    void getItemsInfo(Item items[], ArrayList<Long> ids, int maxx) throws Exception {
+    void getItemsInfo(Item items[], ArrayList<Long> ids, int maxx, DB db) throws Exception {
         int processed = 0;
         int max = maxx;//ids.size();
         
@@ -173,20 +175,77 @@ class InfoGet{
             Iterator<Object> iterator = itemIds.iterator();
 
             while (iterator.hasNext()) {
+                
                 JSONObject object = (JSONObject) iterator.next();
-                String name = (String)object.get("name");
-                String type = (String)object.get("type");
                 int id = (int)(long)object.get("id");
-                int level = (int)(long)object.get("level");
+                String chat_link = (String)object.get("chat_link");
+                String name = (String)object.get("name");
+                String icon = (String)object.get("icon");
                 String description = (String)object.get("description");
+                String type = (String)object.get("type");
+                String rarity = (String)object.get("rarity");
+                int level = (int)(long)object.get("level");
+                int vendor_value = (int)(long)object.get("vendor_value");
+                Long default_skin = (Long)object.get("default_skin");
                 
+                items[id].chat_link = chat_link;
                 items[id].name = name;
-                items[id].type = type;
+                items[id].icon = icon;
                 items[id].description = description;
+                items[id].type = type;
+                items[id].rarity = rarity;
                 items[id].level = level;
+                items[id].vendor_value = vendor_value;
+                items[id].default_skin = default_skin;
                 
-                if(debug);
-                    //System.out.println("Curr : "+id+" Name: "+name);
+                JSONArray flags = (JSONArray)object.get("flags");
+                Iterator<Object> flagsIterator = flags.iterator();
+                while(flagsIterator.hasNext()){
+                    String ss = (String) flagsIterator.next();
+                    items[id].flags.add(ss);
+                    System.out.println("Flag = "+ss);
+                }
+                
+                JSONArray gameTypes = (JSONArray)object.get("game_types");
+                Iterator<Object> gameTypesIterator = gameTypes.iterator();
+                while(gameTypesIterator.hasNext()){
+                    String ss = (String) gameTypesIterator.next();
+                    items[id].game_types.add(ss);
+                    System.out.println("Game types : "+ss);
+                }
+                
+                JSONArray restrictions = (JSONArray)object.get("restrictions");
+                Iterator<Object> restrictionsIterator = restrictions.iterator();
+                while(restrictionsIterator.hasNext()){
+                    String ss = (String) restrictionsIterator.next();
+                    items[id].restrictions.add(ss);
+                    System.out.println("Restrictions : "+ss);
+                }
+                
+                JSONObject details = (JSONObject)object.get("details");
+                String d_type, d_weight_class, d_damage_type;
+                Long d_defense, d_min_power, d_max_power;
+                
+                switch(type){
+                    case "Armor":
+                        d_type = (String)details.get("type");
+                        d_weight_class = (String)details.get("weight_class");
+                        d_defense = (Long)details.get("defense");
+                        //leave stat_choices, infusion slots, infix_upgrade, suffix_item_id, secondary_suffix_item_id for now
+                        System.out.println("Armor type : "+d_type+" weight_class : "+d_weight_class+" defense : "+d_defense);
+                        break;
+                    case "Weapon":
+                        d_type = (String)details.get("type");
+                        d_damage_type = (String)details.get("damage_type");
+                        d_min_power = (Long)details.get("min_power");
+                        d_max_power = (Long)details.get("max_power");
+                        d_defense = (Long)details.get("defense");
+                        System.out.println("Weapon type : "+d_type+" damage_type : "+d_damage_type+" min_power : "+d_min_power+" max_power : "+d_max_power+" defense : "+d_defense);
+                        break;
+                    default:
+                        break;
+                }
+                db.addItem(items[id]);
             }
         }
     }
@@ -278,5 +337,31 @@ class InfoGet{
             }
         }
         return null;
+    }
+    
+    void getInfoFromDB(Item[] items, DB db){
+        ResultSet results = db.executeCommand("select * from Items");
+        
+        if(results == null){
+            System.out.println("SQL Command error");
+            return;
+        }
+        try{
+            while(results.next()){
+                int id = results.getInt(1);
+                items[id].name = results.getString(2);
+                items[id].description = results.getString(3);
+                items[id].chat_link = results.getString(4);
+                items[id].icon = results.getString(5);
+                items[id].type = results.getString(6);
+                items[id].rarity = results.getString(7);
+                items[id].level = results.getLong(8);
+                items[id].vendor_value = results.getLong(9);
+                items[id].default_skin = results.getLong(10);
+                System.out.println(items[id]);
+            }
+        }catch (SQLException e){
+            System.out.println("SQL Exception! : "+e.toString());
+        }
     }
 }

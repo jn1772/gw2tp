@@ -1,17 +1,15 @@
 import java.util.ArrayList;
 
 class Item implements Comparable<Item>{
-        String name; 
 
         //Item ID
-        long id;
-        //Rare, Ascended
-        int level;
-        //Type
-        String type;
-        //Description
-        String description;
-
+        long id, level, vendor_value;
+        Long default_skin;
+        
+        String chat_link, name, icon, description, type, rarity;
+        
+        ArrayList<String> flags, game_types, restrictions;
+        
         //Listings at Trading Post
         ArrayList<Long> b_listings, b_unit_price, b_quantity;
         ArrayList<Long> s_listings, s_unit_price, s_quantity;
@@ -28,7 +26,12 @@ class Item implements Comparable<Item>{
             s_unit_price = new ArrayList<>();
             s_quantity = new ArrayList<>();
             
-            profit = -100000;
+            flags = new ArrayList<>();
+            game_types = new ArrayList<>();
+            restrictions = new ArrayList<>();
+            
+            profit = 0;
+            default_skin = null;
         }
 
         //Calculate Profit
@@ -49,6 +52,12 @@ class Item implements Comparable<Item>{
             if(this.profit < o.profit)return 1;
             else if(this.profit > o.profit)return -1;
             return 0;
+        }
+        
+        public String toString(){
+            StringBuilder sb = new StringBuilder();
+            sb.append("ID: ").append(id).append(" Name: ").append(name).append(" Level: ").append(level).append(" Rarity: ").append(rarity);
+            return sb.toString();
         }
 }
 
