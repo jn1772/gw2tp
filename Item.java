@@ -3,8 +3,13 @@ import java.util.ArrayList;
 class Item implements Comparable<Item>{
 
         //Item ID
-        long id, level, vendor_value;
-        Long default_skin;
+        long id;
+        int level, vendor_value;
+        Integer default_skin;
+        
+        //buyins / selling unit prices and quantity
+        Integer b_upr, b_num;
+        Integer s_upr, s_num;
         
         String chat_link, name, icon, description, type, rarity;
         
@@ -30,6 +35,11 @@ class Item implements Comparable<Item>{
             game_types = new ArrayList<>();
             restrictions = new ArrayList<>();
             
+            b_upr = 0;
+            b_num = 0;
+            s_upr = 0;
+            s_num = 0;
+            
             profit = 0;
             default_skin = null;
         }
@@ -39,9 +49,9 @@ class Item implements Comparable<Item>{
             Check when there is no listing under selling or buying you might get null there
         */
         double calcProfit(){
-            if(name == null || s_unit_price.isEmpty() || b_unit_price.isEmpty())return 0;
-            double diff = s_unit_price.get(0) - b_unit_price.get(0);
-            double tax = s_unit_price.get(0)*0.15;
+            if(name == null || b_num == 0 || s_num == 0)return 0;
+            double diff = s_upr - b_upr;
+            double tax = s_upr*0.15;
             return profit = diff-tax;
         }
         
@@ -66,8 +76,11 @@ class Price{
         int g, s, b;
         
         Price(double p){
-            //System.out.println("p = "+p+" g = p/10000 = "+(p/10000)+" p = p % 10000 = "+(p = p%10000)+""
-            //        + "s = p/100 = "+(p/100)+" p = p % 100 = "+(p%100)+" b = p = "+b);
+            
+            /*
+            System.out.println("p = "+p+" g = p/10000 = "+(p/10000)+" p = p % 10000 = "+(p = p%10000)+""
+                    + "s = p/100 = "+(p/100)+" p = p % 100 = "+(p%100)+" b = p = "+b);
+            */
             g = (int)p/10000;
             p = p%10000;
             s = (int)p/100;

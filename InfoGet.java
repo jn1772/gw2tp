@@ -1,7 +1,8 @@
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
-import java.sql.ResultSet;
+import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -30,32 +31,45 @@ class InfoGet{
         debug = false;
     }
     
-    ArrayList<Long> getItemsIds() throws Exception {
+    String fetchInfo(String path, String parameter1, String p1value){
 
-        URI uri = new URIBuilder()
-                .setScheme("https")
-                .setHost("api.guildwars2.com")
-                .setPort(443)
-                .setPath("/v2/items")
-                //.addParameter("ids", "1,2") 
-                .build();
-        HttpGet httpGet = new HttpGet(uri);
-        HttpClient client = HttpClientBuilder.create().build();
-        HttpResponse response = client.execute(httpGet);
-
-        BufferedReader rd = new BufferedReader(new InputStreamReader(
-                response.getEntity().getContent()));
-       
-        String line;
-        StringBuilder sb = new StringBuilder();
-
-        while ((line = rd.readLine()) != null) {
-            //if(respDebug)System.out.println(line); 
-            sb.append(line);
+        try{
+            URIBuilder urib = new URIBuilder()
+                        .setScheme("https")
+                        .setHost("api.guildwars2.com")
+                        .setPort(443)
+                        .setPath(path);
+            
+            if(parameter1 != null)
+                urib = urib.addParameter(parameter1, p1value);
+            
+            URI uri = urib.build();
+            
+            HttpGet httpGet = new HttpGet(uri);
+            HttpClient client = HttpClientBuilder.create().build();
+            HttpResponse response = client.execute(httpGet);
+        
+            // Get the response
+            BufferedReader rd = new BufferedReader(new InputStreamReader(
+                    response.getEntity().getContent()));
+            String line;
+            StringBuilder sb = new StringBuilder();
+            while ((line = rd.readLine()) != null) {
+                //if(respDebug)System.out.println(line);
+                sb.append(line);
+            }
+            return sb.toString();
+        }catch (URISyntaxException | IOException e){
+            System.err.println("Exception! : "+e.toString());
         }
+        return null;
+    }
+        
+    ArrayList<Long> getItemsIds() throws Exception {
+        String response = fetchInfo("/v2/items", null, null);
 
         JSONParser parser = new JSONParser();
-        Object obj = parser.parse(sb.toString());
+        Object obj = parser.parse(response);
         JSONArray itemIds = (JSONArray) obj; 
         ArrayList<Long> ret = new ArrayList<>();
         Iterator it = itemIds.iterator();
@@ -75,59 +89,7 @@ class InfoGet{
         }
         return items;
     }
-    
-    /*
-    Get item info for a single item
-    */
-    void getItemInfo(Item item) throws Exception{
-        URI uri = new URIBuilder()
-                    .setScheme("https")
-                    .setHost("api.guildwars2.com")
-                    .setPort(443)
-                    .setPath("/v2/items/"+item.id)
-                    .build();
-        HttpGet httpGet = new HttpGet(uri);
-        HttpClient client = HttpClientBuilder.create().build();
-        HttpResponse response = client.execute(httpGet);
 
-        // Get the response
-        BufferedReader rd = new BufferedReader(new InputStreamReader(
-                response.getEntity().getContent()));
-
-        String line;
-        StringBuilder sb = new StringBuilder();
-        while ((line = rd.readLine()) != null) {
-            //if(respDebug)System.out.println(line);
-            sb.append(line);
-        }
-
-        JSONParser parser = new JSONParser();
-        JSONObject obj = (JSONObject)parser.parse(sb.toString());
-        item.name = (String)obj.get("name");
-        item.type = (String)obj.get("type");
-        item.description = (String)obj.get("description");
-        
-        if(debug){
-            System.out.println("\nName: "+item.name+
-                           "\nType: "+item.type+
-                           "\nDesc: "+item.description);
-            System.out.println("Buy Info: ");
-            for(int i=0;i<item.b_listings.size();++i){
-                System.out.println("#"+item.b_listings.get(i)+" Price: "+
-                        item.b_unit_price.get(i)+" Available: "+
-                        item.b_quantity.get(i));
-            }        
-
-            System.out.println("Sell Info: ");
-            for(int i=0;i<item.b_listings.size();++i){
-                System.out.println("#"+item.s_listings.get(i)+" Price: "+
-                        item.s_unit_price.get(i)+" Available: "+
-                        item.s_quantity.get(i));
-            }
-        }
-    }
-
-    static int tp=0;
     /*
     Get item info for 'max' number of Items in items[]. 200 at a time.
     */
@@ -145,32 +107,12 @@ class InfoGet{
             processed = j;
             
             if(debug);
-            System.out.println("getItemsInfo processed : "+processed+"/"+max);
+            System.out.println("Info fetched for : "+processed+"/"+max+" items.");
 
-            URI uri = new URIBuilder()
-                    .setScheme("https")
-                    .setHost("api.guildwars2.com")
-                    .setPort(443)
-                    .setPath("/v2/items")
-                    .addParameter("ids", sbb.toString())
-                    .build();
-            HttpGet httpGet = new HttpGet(uri);
-            HttpClient client = HttpClientBuilder.create().build();
-            HttpResponse response = client.execute(httpGet);
-
-            // Get the response 
-            BufferedReader rd = new BufferedReader(new InputStreamReader(
-                    response.getEntity().getContent()));
-
-            String line;
-            StringBuilder sb = new StringBuilder();
-            while ((line = rd.readLine()) != null) {
-                //if(respDebug)System.out.println(line);
-                sb.append(line);
-            }
+            String response = fetchInfo("/v2/items", "ids", sbb.toString());
             
             JSONParser parser = new JSONParser();
-            Object obj = parser.parse(sb.toString());
+            Object obj = parser.parse(response);
             JSONArray itemIds = (JSONArray) obj;
             Iterator<Object> iterator = itemIds.iterator();
 
@@ -186,7 +128,9 @@ class InfoGet{
                 String rarity = (String)object.get("rarity");
                 int level = (int)(long)object.get("level");
                 int vendor_value = (int)(long)object.get("vendor_value");
-                Long default_skin = (Long)object.get("default_skin");
+                Long df = (Long)object.get("default_skin");
+                Integer default_skin = null;
+                if(df!=null) default_skin = (int)(long)df;
                 
                 items[id].chat_link = chat_link;
                 items[id].name = name;
@@ -203,7 +147,7 @@ class InfoGet{
                 while(flagsIterator.hasNext()){
                     String ss = (String) flagsIterator.next();
                     items[id].flags.add(ss);
-                    System.out.println("Flag = "+ss);
+                    //System.out.println("Flag = "+ss);
                 }
                 
                 JSONArray gameTypes = (JSONArray)object.get("game_types");
@@ -211,7 +155,7 @@ class InfoGet{
                 while(gameTypesIterator.hasNext()){
                     String ss = (String) gameTypesIterator.next();
                     items[id].game_types.add(ss);
-                    System.out.println("Game types : "+ss);
+                    //System.out.println("Game types : "+ss);
                 }
                 
                 JSONArray restrictions = (JSONArray)object.get("restrictions");
@@ -219,7 +163,7 @@ class InfoGet{
                 while(restrictionsIterator.hasNext()){
                     String ss = (String) restrictionsIterator.next();
                     items[id].restrictions.add(ss);
-                    System.out.println("Restrictions : "+ss);
+                    //System.out.println("Restrictions : "+ss);
                 }
                 
                 JSONObject details = (JSONObject)object.get("details");
@@ -232,7 +176,7 @@ class InfoGet{
                         d_weight_class = (String)details.get("weight_class");
                         d_defense = (Long)details.get("defense");
                         //leave stat_choices, infusion slots, infix_upgrade, suffix_item_id, secondary_suffix_item_id for now
-                        System.out.println("Armor type : "+d_type+" weight_class : "+d_weight_class+" defense : "+d_defense);
+                        //System.out.println("Armor type : "+d_type+" weight_class : "+d_weight_class+" defense : "+d_defense);
                         break;
                     case "Weapon":
                         d_type = (String)details.get("type");
@@ -240,20 +184,21 @@ class InfoGet{
                         d_min_power = (Long)details.get("min_power");
                         d_max_power = (Long)details.get("max_power");
                         d_defense = (Long)details.get("defense");
-                        System.out.println("Weapon type : "+d_type+" damage_type : "+d_damage_type+" min_power : "+d_min_power+" max_power : "+d_max_power+" defense : "+d_defense);
+                        //System.out.println("Weapon type : "+d_type+" damage_type : "+d_damage_type+" min_power : "+d_min_power+" max_power : "+d_max_power+" defense : "+d_defense);
                         break;
                     default:
                         break;
                 }
-                db.addItem(items[id]);
+                db.addItemBatch(items[id]);
             }
         }
+        db.pushItemsBatch();
     }
-    
+
     /*
     Get Item Prices at TP for 'max' number of items in items[]. 200 at a time.
     */
-    ArrayList<Long> getItemsPrices(Item []items, ArrayList<Long> ids, int maxx) throws Exception {
+    ArrayList<Long> getItemsPrices(Item []items, ArrayList<Long> ids, int maxx, DB db) throws Exception {
         int max = maxx;//ids.size();
         int processed = 0;
         while(processed < max){
@@ -264,31 +209,113 @@ class InfoGet{
             }
             processed = j;
             sbb.deleteCharAt(sbb.length()-1);
-            URI uri = new URIBuilder()
-                    .setScheme("https")
-                    .setHost("api.guildwars2.com")
-                    .setPort(443)
-                    .setPath("/v2/commerce/listings")
-                    .addParameter("ids", sbb.toString())
-                    .build();
-            HttpGet httpGet = new HttpGet(uri);
-            HttpClient client = HttpClientBuilder.create().build();
-            HttpResponse response = client.execute(httpGet);
-            //if((tp+=200) > 3200)System.out.println("tp = "+tp+" "+sbb.toString());
-            // Get the response
-            BufferedReader rd = new BufferedReader(new InputStreamReader(
-                    response.getEntity().getContent()));
-
-            String line;
-            StringBuilder sb = new StringBuilder();
-            while ((line = rd.readLine()) != null) {
-                //if(respDebug)System.out.println(line);
-                sb.append(line);
-            }
-            System.out.println("itemsPrices processed : "+processed+"/"+max);
+            
+            String response = fetchInfo("/v2/commerce/prices", "ids", sbb.toString());
+            
+            System.out.println("Price fetched for : "+processed+"/"+max+" items.");
             JSONParser parser = new JSONParser();
             try{
-                Object obj = parser.parse(sb.toString());
+                Object obj = parser.parse(response);
+                JSONArray itemIds = (JSONArray) obj;
+                Iterator<Object> iterator = itemIds.iterator();
+
+                while (iterator.hasNext()) {
+
+                    JSONObject object = (JSONObject) iterator.next();
+                    
+                    int id = (int)(long)object.get("id");
+                    JSONObject buys = (JSONObject) object.get("buys");
+                    JSONObject sells = (JSONObject) object.get("sells");
+
+                    int b_quant = (int)(long)buys.get("quantity");
+                    int b_price = (int)(long)buys.get("unit_price");
+                    
+                    int s_quant = (int)(long)sells.get("quantity");
+                    int s_price = (int)(long)sells.get("unit_price");
+                    
+                    items[id].b_num = b_quant;
+                    items[id].b_upr = b_price;
+                    
+                    items[id].s_num = s_quant;
+                    items[id].s_upr = s_price;
+                    
+                    items[id].calcProfit();
+                    
+                    db.addItemPriceBatch(items[id]);
+                }
+            }catch (ClassCastException e){
+                System.err.println("!Exception (Class Cast). Continuing...");
+                System.err.println("Item ids were : "+sbb);
+            }
+        }
+        db.pushPricesBatch();
+        return null;
+    }
+    
+ 
+    void getInfoFromDB(Item[] items, DB db){
+        Result r = db.executeCommand("select * from Items");
+        Result r_p = db.executeCommand("select * from Prices");
+        if(r.error != 0){
+            System.err.println("SQL Command error");
+            return;
+        }
+        try{
+            while(r.result.next()){
+                int id = r.result.getInt(1);
+                items[id].name = r.result.getString(2);
+                items[id].description = r.result.getString(3);
+                items[id].chat_link = r.result.getString(4);
+                items[id].icon = r.result.getString(5);
+                items[id].type = r.result.getString(6);
+                items[id].rarity = r.result.getString(7);
+                items[id].level = r.result.getInt(8);
+                items[id].vendor_value = r.result.getInt(9);
+                items[id].default_skin = r.result.getInt(10);
+                //System.out.println(items[id]);
+            }
+        }catch (SQLException e){
+            System.err.println("SQL Exception! : "+e.toString()+" error code : "+e.getErrorCode());
+        }
+        
+        if(r_p.error != 0){
+            System.out.println("SQL Command error");
+            return;
+        }
+        try{
+            while(r_p.result.next()){
+                int id = r_p.result.getInt(1);
+                items[id].b_upr = r_p.result.getInt(2);
+                items[id].b_num = r_p.result.getInt(3);
+                items[id].s_upr = r_p.result.getInt(4);
+                items[id].s_num = r_p.result.getInt(5);
+            }
+        }catch (SQLException e){
+            System.err.println("SQL Exception! : "+e.toString()+" error code : "+e.getErrorCode());
+        }
+    }
+    
+        /*
+    Get Item Prices at TP for 'max' number of items in items[]. 200 at a time.
+    */
+    ArrayList<Long> getItemsListings(Item []items, ArrayList<Long> ids, int maxx) throws Exception {
+        int max = maxx;//ids.size();
+        int processed = 0;
+        while(processed < max){
+            StringBuilder sbb = new StringBuilder();
+            int j;
+            for (j = processed; j < Math.min(200 + processed, max); ++j) {
+                sbb.append(items[(int)(long)ids.get(j)].id).append(",");
+            }
+            processed = j;
+            sbb.deleteCharAt(sbb.length()-1);
+            
+            String response = fetchInfo("/v2/commerce/listings", "ids", sbb.toString());
+            
+            System.out.println("items (commerce listings) processed : "+processed+"/"+max);
+            JSONParser parser = new JSONParser();
+            try{
+                Object obj = parser.parse(response);
                 JSONArray itemIds = (JSONArray) obj;
                 Iterator<Object> iterator = itemIds.iterator();
 
@@ -332,36 +359,43 @@ class InfoGet{
                     curr++;
                 }
             }catch (ClassCastException e){
-                System.out.println("!Exception (Class Cast). Continuing...");
-                System.out.println("Item ids were : "+sbb);
+                System.err.println("!Exception (Class Cast). Continuing...");
+                System.err.println("Item ids were : "+sbb);
             }
         }
         return null;
     }
     
-    void getInfoFromDB(Item[] items, DB db){
-        ResultSet results = db.executeCommand("select * from Items");
+        /*
+    Get item info for a single item
+    */
+    void getItemInfo(Item item) throws Exception{
+       String response = fetchInfo("/v2/items", "id", item.id+"");
+
+        JSONParser parser = new JSONParser();
+        JSONObject obj = (JSONObject)parser.parse(response);
+        item.name = (String)obj.get("name");
+        item.type = (String)obj.get("type");
+        item.description = (String)obj.get("description");
         
-        if(results == null){
-            System.out.println("SQL Command error");
-            return;
-        }
-        try{
-            while(results.next()){
-                int id = results.getInt(1);
-                items[id].name = results.getString(2);
-                items[id].description = results.getString(3);
-                items[id].chat_link = results.getString(4);
-                items[id].icon = results.getString(5);
-                items[id].type = results.getString(6);
-                items[id].rarity = results.getString(7);
-                items[id].level = results.getLong(8);
-                items[id].vendor_value = results.getLong(9);
-                items[id].default_skin = results.getLong(10);
-                System.out.println(items[id]);
+        if(debug){
+            System.out.println("\nName: "+item.name+
+                           "\nType: "+item.type+
+                           "\nDesc: "+item.description);
+            System.out.println("Buy Info: ");
+            for(int i=0;i<item.b_listings.size();++i){
+                System.out.println("#"+item.b_listings.get(i)+" Price: "+
+                        item.b_unit_price.get(i)+" Available: "+
+                        item.b_quantity.get(i));
+            }        
+
+            System.out.println("Sell Info: ");
+            for(int i=0;i<item.b_listings.size();++i){
+                System.out.println("#"+item.s_listings.get(i)+" Price: "+
+                        item.s_unit_price.get(i)+" Available: "+
+                        item.s_quantity.get(i));
             }
-        }catch (SQLException e){
-            System.out.println("SQL Exception! : "+e.toString());
         }
     }
+   
 }
