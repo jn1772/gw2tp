@@ -1,3 +1,4 @@
+```
 *** GW2 TP Helper ***
 What would you like to do: 
 1. Get item purchase recommendations.
@@ -5,8 +6,11 @@ What would you like to do:
 3. Exit.
 
 :1
+
 SQLException : Table 'GW2.Stamp' doesn't exist 1146
+
 DB doesn't exist. Creating a new one...
+
 Putting new stamp...
 Info fetched for : 200/54312 items.
 Info fetched for : 400/54312 items.
@@ -96,25 +100,4 @@ Buy at: 35g 14s 24b
 Sell at: 599g 99s 99b
 Profit: 474g 85s 75b
 --------------------------------------
-
-Deps:
-
-<dependencies>
-    <!-- https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient -->
-    <dependency>
-        <groupId>org.apache.httpcomponents</groupId>
-        <artifactId>httpclient</artifactId>
-        <version>4.5.6</version>
-    </dependency>
-    <!-- https://mvnrepository.com/artifact/com.googlecode.json-simple/json-simple -->
-    <dependency>
-        <groupId>com.googlecode.json-simple</groupId>
-        <artifactId>json-simple</artifactId>
-        <version>1.1.1</version>
-    </dependency>
-    <dependency>
-        <groupId>mysql</groupId>
-        <artifactId>mysql-connector-java</artifactId>
-        <version>8.0.13</version>
-    </dependency>    
-</dependencies>
+```
